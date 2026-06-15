@@ -3,7 +3,6 @@ import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, 
-  Users, 
   Store, 
   User as UserIcon, 
   LogOut, 

@@ -28,8 +28,7 @@ import {
   ResponsiveContainer, 
   PieChart, 
   Pie, 
-  Cell, 
-  Legend 
+  Cell
 } from 'recharts';
 
 interface UserItem {
@@ -59,8 +58,8 @@ export const AdminDashboard: React.FC = () => {
   // User management states
   const [userSearch, setUserSearch] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState<string>('');
-  const [userSortBy, setUserSortBy] = useState('createdAt');
-  const [userSortOrder, setUserSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [userSortBy] = useState('createdAt');
+  const [userSortOrder] = useState<'asc' | 'desc'>('desc');
   const [userPage, setUserPage] = useState(1);
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<UserItem | null>(null);
