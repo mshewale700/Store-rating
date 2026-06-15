@@ -1,0 +1,100 @@
+version: '3.9'
+
+services:
+  # ────────────────────────────────────────────────────────────
+  # PostgreSQL Database
+  # ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: store_rating_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-storerating}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-storerating_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-store_rating_db}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-storerating}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - store_rating_network
+
+  # ────────────────────────────────────────────────────────────
+  # Backend — NestJS API
+  # ────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: store_rating_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_3dEVONZR6JKw@ep-raspy-hat-aorko8qb-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-access-secret}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-change-me-in-production-refresh-secret}
+    ports:
+      - '5000:5000'
+    networks:
+      - store_rating_network
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://localhost:5000/api/docs || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ────────────────────────────────────────────────────────────
+  # DB Migrations — Prisma migrate deploy
+  # ────────────────────────────────────────────────────────────
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: builder
+    container_name: store_rating_migrate
+    command: sh -c "npx prisma migrate deploy && npx prisma db seed"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://neondb_owner:npg_3dEVONZR6JKw@ep-raspy-hat-aorko8qb-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require}
+    networks:
+      - store_rating_network
+    restart: 'no'
+
+  # ────────────────────────────────────────────────────────────
+  # Frontend — React / Vite (served by Nginx)
+  # ────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: store_rating_ui
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - '80:80'
+    networks:
+      - store_rating_network
+
+# ────────────────────────────────────────────────────────────
+# Shared infrastructure
+# ────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+
+networks:
+  store_rating_network:
+    driver: bridge
