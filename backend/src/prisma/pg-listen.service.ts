@@ -10,6 +10,15 @@ export class PgListenService implements OnModuleInit, OnModuleDestroy {
   constructor(private readonly eventsGateway: EventsGateway) {}
 
   async onModuleInit() {
+    // Vercel runs serverless functions — persistent TCP connections are not supported.
+    // Skip pg LISTEN on Vercel; all REST API endpoints remain fully functional.
+    if (process.env.VERCEL) {
+      this.logger.warn(
+        'Running on Vercel (serverless) — skipping PostgreSQL LISTEN. Real-time sync disabled.',
+      );
+      return;
+    }
+
     this.client = new Client({
       connectionString: process.env.DATABASE_URL,
     });
